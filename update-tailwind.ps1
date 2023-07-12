@@ -1,0 +1,1 @@
+npx tailwindcss -i ./assets/index.css -o ./assets/output.css
