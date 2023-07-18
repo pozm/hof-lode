@@ -6,7 +6,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 
 use hof_lode::{
-    should_update, update_db, AppState, FCMem, Poll, TheErrors,
+    should_update, update_db, AppState, FCMem, Poll, TheErrors, run_tasks,
 };
 use serde_json::json;
 use std::sync::Arc;
@@ -178,13 +178,13 @@ async fn main() {
         .nest_service("/p", ServeDir::new("./public/").append_index_html_on_directories(true))
         .with_state(data.clone());
 
-    // let tasks_fut = run_tasks(data.clone());
+    let tasks_fut = run_tasks(data.clone());
     let server_fut =
         axum::Server::bind(&"0.0.0.0:3133".parse().unwrap()).serve(router.into_make_service());
     select! {
-        // _ = tasks_fut => {
-        //     println!("tasks stopped");
-        // },
+        _ = tasks_fut => {
+            println!("tasks stopped");
+        },
         _ = server_fut => {
             println!("server stopped");
             data.write().await.stop();
