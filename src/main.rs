@@ -168,7 +168,7 @@ async fn main() {
     let data = Arc::new(tokio::sync::RwLock::new(AppState::new().await));
 
     let router = Router::new()
-        .route("/", get(the_the))
+        .route("/mem", get(the_the))
         .route("/api/polls", get(get_polls))
         .route(
             "/api/polls/housing/:poll_id",
