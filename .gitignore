@@ -1,2 +1,8 @@
 /target
 /.idea
+/.env
+/hof_lode.db
+/hof-lode.tar
+/public
+**/.vscode
+/assets/output.css

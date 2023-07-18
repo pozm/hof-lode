@@ -3,6 +3,7 @@ use sqlx::{query, query_as, FromRow, SqlitePool};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use serde::{Deserialize, Serialize};
 use tokio::select;
 use tokio::sync::RwLock;
 use tokio::time::interval;
@@ -24,6 +25,29 @@ pub struct FCMem {
     pub leftDate: Option<chrono::NaiveDateTime>,
 }
 
+#[derive(FromRow, Debug, Clone, Serialize,Deserialize)]
+pub struct Poll {
+    pub id : i64,
+    pub poll_name: String,
+    pub open : bool,
+    pub close_date : Option<chrono::NaiveDateTime>,
+    #[sqlx(rename = "type")]
+    pub r#type : i64,
+}
+#[derive(FromRow, Debug, Clone,Serialize,Deserialize)]
+pub struct House {
+    pub id : i64,
+    pub house_name: String,
+    pub address : String,
+    pub image: String
+}
+#[derive(FromRow, Debug, Clone,Serialize,Deserialize)]
+pub struct PollHouse {
+    pub poll_id : i64,
+    pub house_id : i64,
+    pub player_name : String,
+    pub ip : String,
+}
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub last_update: chrono::NaiveDateTime,
@@ -39,7 +63,7 @@ impl AppState {
             .await
             .unwrap();
 
-        sqlx::migrate!("./migrations").run(&db_con).await.unwrap();
+        // sqlx::migrate!("./migrations").run(&db_con).await.unwrap();
 
         let members = query_as!(FCMem, "SELECT * FROM fcMembers")
             .fetch_all(&db_con)
