@@ -179,7 +179,7 @@ async fn main() {
         .nest_service("/assets", ServeDir::new("./assets/"))
         .nest_service("/p", ServeDir::new("./public/").append_index_html_on_directories(true)).layer(
             tower::ServiceBuilder::new().layer(SetResponseHeaderLayer::if_not_present(
-                header::SERVER,
+                header::HeaderName::from_static("x-server-name"),
                 HeaderValue::from_static("axum"),
             ))
         )
