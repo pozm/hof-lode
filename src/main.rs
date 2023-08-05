@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, HeaderValue};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
@@ -8,7 +8,9 @@ use axum::{Json, Router};
 use hof_lode::{
     should_update, update_db, AppState, FCMem, Poll, TheErrors, run_tasks,
 };
+use reqwest::header;
 use serde_json::json;
+use tower_http::set_header::SetResponseHeaderLayer;
 use std::sync::Arc;
 
 use tokio::select;
@@ -175,7 +177,12 @@ async fn main() {
             get(get_poll_housing_options).post(submit_housing_vote),
         )
         .nest_service("/assets", ServeDir::new("./assets/"))
-        .nest_service("/p", ServeDir::new("./public/").append_index_html_on_directories(true))
+        .nest_service("/p", ServeDir::new("./public/").append_index_html_on_directories(true)).layer(
+            tower::ServiceBuilder::new().layer(SetResponseHeaderLayer::if_not_present(
+                header::SERVER,
+                HeaderValue::from_static("axum"),
+            ))
+        )
         .with_state(data.clone());
 
     let tasks_fut = run_tasks(data.clone());

@@ -158,7 +158,7 @@ pub fn should_update(last: NaiveDateTime) -> bool {
     let now = Local::now().naive_local();
     let duration = now.signed_duration_since(last);
     let seconds = duration.num_seconds();
-    return seconds > (120 * 60);
+    seconds > (120 * 60)
 }
 pub async fn run_tasks(state : Arc<RwLock<AppState>>) {
     let mut invt = interval(Duration::from_secs(60 * 60));
@@ -172,7 +172,7 @@ pub async fn run_tasks(state : Arc<RwLock<AppState>>) {
             _ = invt.tick() => {
                 println!("[TASK]updating db");
                 let mut uw = state.write().await;
-                if let Err(e) = update_db(&mut *uw).await {
+                if let Err(e) = update_db(&mut uw).await {
                     println!("[TASK]error updating db {:?}", e);
                 };
             }
