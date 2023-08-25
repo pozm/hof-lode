@@ -103,18 +103,39 @@ pub async fn update_db(appst : &mut AppState) -> Result<(Vec<FCMem>, Vec<FCMem>,
 
         let oldm_st = appst.cache_data.clone();
 
-        let members_gone = oldm_st.iter().filter(|old| !old.left && !new_data.free_company_members.iter().any(|new| new.id == old.id)).cloned().collect::<Vec<FCMem>>();
-        let new_members = new_data.free_company_members.iter().filter(|new| !oldm_st.iter().any(|old| new.id == old.id || old.left)).cloned().collect::<Vec<FreeCompanyMember>>();
-
         let mut bulk_db = appst.db.begin().await.map_err(TheErrors::DatabaseError)?;
 
-        for mem in &new_members {
-            println!("adding new member -> {:?}", mem.name);
-            sqlx::query!("INSERT OR IGNORE INTO fcMembers (id, name, rank,avatar,entryDate, left) VALUES (?,?,?,?,(SELECT strftime('%Y-%m-%d %H:%M:%S', datetime('now'))),0)",mem.id, mem.name, mem.rank,mem.avatar)
-                .execute(&mut *bulk_db)
-                .await
-                .map_err(TheErrors::DatabaseError)?;
+        for mem in &new_data.free_company_members {
+            let in_old_state = oldm_st.iter().find(|old| old.id == mem.id);
+            if let Some(fm) = in_old_state {
+                // member already in db, let's check if they changed rank
+                if fm.rank != mem.rank {
+                    println!("updating rank for {:?} -> {:?}", mem.name, mem.rank);
+                    sqlx::query!("UPDATE fcMembers SET rank = ? WHERE id = ?", mem.rank, mem.id)
+                        .execute(&mut *bulk_db)
+                        .await
+                        .map_err(TheErrors::DatabaseError)?;
+                }
+                // check if they left and then rejoined?
+                if fm.left {
+                    println!("updating left status for {:?} -> {:?}", mem.name, fm.left);
+                    sqlx::query!("UPDATE fcMembers SET (left,leftDate) = (0,NULL) WHERE id = ?", mem.id)
+                        .execute(&mut *bulk_db)
+                        .await
+                        .map_err(TheErrors::DatabaseError)?;
+                }
+            }
+            else {
+                // brand new member
+                println!("adding new member -> {:?}", mem.name);
+                sqlx::query!("INSERT OR IGNORE INTO fcMembers (id, name, rank,avatar,entryDate, left) VALUES (?,?,?,?,(SELECT strftime('%Y-%m-%d %H:%M:%S', datetime('now'))),0)",mem.id, mem.name, mem.rank,mem.avatar)
+                    .execute(&mut *bulk_db)
+                    .await
+                    .map_err(TheErrors::DatabaseError)?;
+            }
         }
+        // check for members in db, but not in latest data
+        let members_gone = oldm_st.iter().filter(|old| !new_data.free_company_members.iter().any(|new| new.id == old.id)).cloned().collect::<Vec<FCMem>>();
         for mem in &members_gone {
             println!("removing member -> {:?}", mem.name);
             sqlx::query!("UPDATE fcMembers SET (left,leftDate) = (1,(SELECT strftime('%Y-%m-%d %H:%M:%S', datetime('now')))) WHERE id = ?", mem.id)
@@ -134,11 +155,9 @@ pub async fn update_db(appst : &mut AppState) -> Result<(Vec<FCMem>, Vec<FCMem>,
             .fetch_all(&appst.db)
             .await
             .map_err(TheErrors::DatabaseError)?;
-        let new_members = if new_members.len() < 10 {
-            members.iter().filter(|new| !oldm_st.iter().any(|old| new.id == old.id)).cloned().collect::<Vec<FCMem>>()
-        } else {
-            Vec::new()
-        };
+        let new_members =
+            members.iter().filter(|new| !oldm_st.iter().any(|old| new.id == old.id)).cloned().collect::<Vec<FCMem>>();
+
 
     appst.cache_data = members.clone();
     appst.last_update = Local::now().naive_local();
