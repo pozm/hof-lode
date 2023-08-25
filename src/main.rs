@@ -49,7 +49,7 @@ async fn the_the(
             (data.read().await.cache_data.clone(), Vec::new(), Vec::new())
         };
 
-        data.sort_by_key(|a| a.left);
+        data.sort_by_key(|a| (a.left, a.rank.clone(), a.entryDate));
         Result::<_, TheErrors>::Ok(IndexTemplate {
             members: data,
             new_members: new,
