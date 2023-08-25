@@ -104,7 +104,7 @@ pub async fn update_db(appst : &mut AppState) -> Result<(Vec<FCMem>, Vec<FCMem>,
         let oldm_st = appst.cache_data.clone();
 
         let members_gone = oldm_st.iter().filter(|old| !old.left && !new_data.free_company_members.iter().any(|new| new.id == old.id)).cloned().collect::<Vec<FCMem>>();
-        let new_members = new_data.free_company_members.iter().filter(|new| !oldm_st.iter().any(|old| new.id == old.id || !old.left)).cloned().collect::<Vec<FreeCompanyMember>>();
+        let new_members = new_data.free_company_members.iter().filter(|new| !oldm_st.iter().any(|old| new.id == old.id || old.left)).cloned().collect::<Vec<FreeCompanyMember>>();
 
         let mut bulk_db = appst.db.begin().await.map_err(TheErrors::DatabaseError)?;
 
